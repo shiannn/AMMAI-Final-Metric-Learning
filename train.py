@@ -102,5 +102,9 @@ if __name__=='__main__':
 
     start_epoch = params.start_epoch
     stop_epoch = params.stop_epoch
-
+    
+    if configs.model_path!=None and os.exists(configs.model_path):
+        checkpoint = torch.load(configs.model_path)
+        start_epoch = checkpoint['epoch']
+        model.load_state_dict(checkpoint['state'])
     model = train(base_loader, val_loader, model, optimization, start_epoch, stop_epoch, params)
