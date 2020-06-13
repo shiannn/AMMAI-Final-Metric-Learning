@@ -13,7 +13,7 @@ class MyProtoNet(MetaTemplate):
     def __init__(self, model_func,  n_way, n_support, embed_dim=64, margin=0.5):
         super(MyProtoNet, self).__init__(model_func,  n_way, n_support)
         self.feat_dim = embed_dim
-        self.feature = MyModel(model_func, self.embed_dim)
+        self.feature = MyModel(model_func, self.feat_dim)
         self.cos_min = -1.+1e-7
         self.cos_max = 1.-1e-7
         self.margin = margin
