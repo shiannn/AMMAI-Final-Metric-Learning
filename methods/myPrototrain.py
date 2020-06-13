@@ -51,7 +51,7 @@ class MyProtoNet(MetaTemplate):
         return torch.diag(dist_mat).mean()
     
     def set_forward_loss(self, x):
-        z_support, z_query  = self.parse_feature(x,is_feature)
+        z_support, z_query  = self.parse_feature(x, False)
         cos_dist = self.cos_dist_func(z_support, z_query)
         cos_dist_with_margin = self.add_margin(cos_dist)
         
