@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 import numpy as np
 import torch
 import torch.nn as nn
@@ -14,6 +14,7 @@ import backbone
 from methods.baselinetrain import BaselineTrain
 from methods.protonet import ProtoNet
 from methods.mymodeltrain import MyModelTrain
+from methods.myPrototrain import MyProtoNet
 
 from io_utils import model_dict, parse_args, get_resume_file  
 from datasets import miniImageNet_few_shot
@@ -66,7 +67,7 @@ if __name__=='__main__':
         else:
             model = MyModelTrain(model_dict[params.model], params.num_classes, params.margin, params.embed_dim, params.logit_scale)
     
-    elif params.method in ['protonet']:
+    elif params.method in ['protonet', 'myprotonet']:
         n_query = max(1, int(16* params.test_n_way/params.train_n_way)) #if test_n_way is smaller than train_n_way, reduce n_query to keep batch size small
         train_few_shot_params    = dict(n_way = params.train_n_way, n_support = params.n_shot) 
         test_few_shot_params     = dict(n_way = params.test_n_way, n_support = params.n_shot) 
@@ -83,6 +84,8 @@ if __name__=='__main__':
 
         if params.method == 'protonet':
             model           = ProtoNet( model_dict[params.model], **train_few_shot_params )
+        elif params.method == 'myprotonet':
+            model           = MyProtoNet( model_dict[params.model], **train_few_shot_params )
     
     else:
        raise ValueError('Unknown method')
@@ -102,9 +105,11 @@ if __name__=='__main__':
 
     start_epoch = params.start_epoch
     stop_epoch = params.stop_epoch
+    print('stop_epoch', stop_epoch)
     
-    if configs.model_path!=None and os.exists(configs.model_path):
+    if configs.model_path!=None and os.path.exists(configs.model_path):
         checkpoint = torch.load(configs.model_path)
         start_epoch = checkpoint['epoch']
         model.load_state_dict(checkpoint['state'])
     model = train(base_loader, val_loader, model, optimization, start_epoch, stop_epoch, params)
+

@@ -5,13 +5,13 @@ from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
 from methods.meta_template import MetaTemplate
-from mymodeltrain import MyModel
+from methods.mymodeltrain import MyModel
 
 import utils
 
-class ProtoNet(MetaTemplate):
+class MyProtoNet(MetaTemplate):
     def __init__(self, model_func,  n_way, n_support, embed_dim=64, margin=0.5):
-        super(ProtoNet, self).__init__(model_func,  n_way, n_support)
+        super(MyProtoNet, self).__init__(model_func,  n_way, n_support)
         self.feat_dim = embed_dim
         self.feature = MyModel(model_func, self.embed_dim)
         self.cos_min = -1.+1e-7
@@ -25,6 +25,11 @@ class ProtoNet(MetaTemplate):
         
         dist_mat = torch.mm(z_query, z_support.t()).view(self.n_way, self.n_query, self.n_way, self.n_support)
         return torch.median(dist_mat, dim=3).view(-1, self.n_way)
+    
+    def forward(self,x):
+        out  = self.feature.forward(x)
+        normalized_out = nn.functional.normalized(out, p=2, dim=1)
+        return normalized_out
     
     def set_forward(self,x,is_feature = False):
         z_support, z_query  = self.parse_feature(x,is_feature)
