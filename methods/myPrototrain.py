@@ -18,6 +18,8 @@ class MyProtoNet(MetaTemplate):
         self.feature = MyModel(model_func, self.feat_dim)
         self.cos_min = -1.+1e-7
         self.cos_max = 1.-1e-7
+        self.scale = 64
+
         self.margin = margin
         self.loss_fn  = nn.CrossEntropyLoss()
     
@@ -36,7 +38,11 @@ class MyProtoNet(MetaTemplate):
     
     def set_forward(self,x,is_feature = False):
         z_support, z_query  = self.parse_feature(x,is_feature)
-        return -self.cos_dist_func(z_support, z_query)
+        cos_dist = self.cos_dist_func(z_support, z_query)
+        #print('[set_forward]')
+        #print('cos_dist', cos_dist)
+        #print('scaled cos_dist', -self.scale*cos_dist)
+        return -self.scale*cos_dist
     
     def add_margin(self, cos_dist):
         with torch.no_grad():
@@ -63,7 +69,10 @@ class MyProtoNet(MetaTemplate):
         
         y_query = torch.from_numpy(np.repeat(range( self.n_way ), self.n_query ))
         y_query = Variable(y_query.cuda())
-        class_loss = self.loss_fn(-cos_dist, y_query)
+        #print('[set_forward_loss]')
+        #print('cos_dist_with_margin', cos_dist_with_margin)
+        #print('-self.scale*cos_dist_with_margin', -self.scale*cos_dist_with_margin)
+        class_loss = self.loss_fn(-self.scale*cos_dist_with_margin, y_query)
         
         compact_loss = self.compact_loss(z_support)
         return torch.add(class_loss, compact_loss)
