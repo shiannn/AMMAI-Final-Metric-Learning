@@ -42,7 +42,7 @@ class MyProtoNet(MetaTemplate):
         #print('[set_forward]')
         #print('cos_dist', cos_dist)
         #print('scaled cos_dist', -self.scale*cos_dist)
-        return -self.scale*cos_dist
+        return self.scale*cos_dist
     
     def add_margin(self, cos_dist):
         with torch.no_grad():
@@ -72,7 +72,7 @@ class MyProtoNet(MetaTemplate):
         #print('[set_forward_loss]')
         #print('cos_dist_with_margin', cos_dist_with_margin)
         #print('-self.scale*cos_dist_with_margin', -self.scale*cos_dist_with_margin)
-        class_loss = self.loss_fn(-self.scale*cos_dist_with_margin, y_query)
+        class_loss = self.loss_fn(self.scale*cos_dist_with_margin, y_query)
         
         compact_loss = self.compact_loss(z_support)
         return torch.add(class_loss, compact_loss)
