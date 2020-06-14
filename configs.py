@@ -1,5 +1,6 @@
 import os
-input_dir = '/tmp2/b05902020'
+#input_dir = '/tmp2/b05902020'
+input_dir = '/tmp2/rsh/AMMAI_data'
 
 save_dir = os.path.join(input_dir, 'logs')
 model_path = None

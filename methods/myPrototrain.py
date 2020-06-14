@@ -9,8 +9,10 @@ from methods.mymodeltrain import MyModel
 
 import utils
 
+torch.autograd.set_detect_anomaly(True)
+
 class MyProtoNet(MetaTemplate):
-    def __init__(self, model_func,  n_way, n_support, embed_dim=64, margin=0.5):
+    def __init__(self, model_func,  n_way, n_support, embed_dim=128, margin=0.5):
         super(MyProtoNet, self).__init__(model_func,  n_way, n_support)
         self.feat_dim = embed_dim
         self.feature = MyModel(model_func, self.feat_dim)
@@ -24,7 +26,8 @@ class MyProtoNet(MetaTemplate):
         z_query     = z_query.contiguous().view(self.n_way * self.n_query, -1 )
         
         dist_mat = torch.mm(z_query, z_support.t()).view(self.n_way, self.n_query, self.n_way, self.n_support)
-        return torch.median(dist_mat, dim=3).view(-1, self.n_way)
+        medval, medind = torch.median(dist_mat, dim=3)
+        return medval.view(-1, self.n_way)
     
     def forward(self,x):
         out  = self.feature.forward(x)
@@ -36,19 +39,22 @@ class MyProtoNet(MetaTemplate):
         return -self.cos_dist_func(z_support, z_query)
     
     def add_margin(self, cos_dist):
-        indx_0 = torch.arange(cos_dist.size(0))
-        indx_1 = torch.arange(self.n_way).repeat_interleave(self.n_query)
-        
-        picked = cos_dist.gather(1, indx_1.view(-1,1))
+        with torch.no_grad():
+            indx_0 = torch.arange(cos_dist.size(0)).cuda()
+            indx_1 = torch.arange(self.n_way).repeat_interleave(self.n_query).cuda()
+            picked = cos_dist.gather(1, indx_1.view(-1,1))
+
         angles = torch.acos(torch.clamp(picked, self.cos_min, self.cos_max))
         new_ang = torch.add(angles, self.margin)
-        cos_dist[indx_0,indx_1] = torch.cos(new_ang)
+        
+        cos_dist[indx_0,indx_1.view(-1,1)] = torch.cos(new_ang)
         return cos_dist
     
     def compact_loss(self, z_support):
         z_sup_mean = z_support.mean(1)
         dist_mat = torch.mm(z_sup_mean, z_sup_mean.t())
-        return torch.diag(dist_mat).mean()
+        diag = torch.diag(dist_mat)
+        return diag.mean()
     
     def set_forward_loss(self, x):
         z_support, z_query  = self.parse_feature(x, False)
