@@ -31,10 +31,30 @@ class MyProtoNet(MetaTemplate):
         medval, medind = torch.median(dist_mat, dim=3)
         return medval.view(-1, self.n_way)
     
+    def parse_feature(self,x,is_feature):
+        x    = Variable(x.to(self.device))
+        if is_feature:
+            z_all = x
+        else:
+            x           = x.contiguous().view( self.n_way * (self.n_support + self.n_query), *x.size()[2:]) 
+            z_all       = self.feature.forward(x)
+            #print(z_all)
+            z_all = nn.functional.normalize(z_all, p=2, dim=1)
+            #print(z_all)
+            #print(z_all.shape)
+            z_all       = z_all.view( self.n_way, self.n_support + self.n_query, -1)
+        z_support   = z_all[:, :self.n_support]
+        z_query     = z_all[:, self.n_support:]
+
+        return z_support, z_query
+    """
     def forward(self,x):
         out  = self.feature.forward(x)
+        print('out', out)
         normalized_out = nn.functional.normalized(out, p=2, dim=1)
+        print('normalize', normalized_out)
         return normalized_out
+    """
     
     def set_forward(self,x,is_feature = False):
         z_support, z_query  = self.parse_feature(x,is_feature)
@@ -45,15 +65,23 @@ class MyProtoNet(MetaTemplate):
         return self.scale*cos_dist
     
     def add_margin(self, cos_dist):
+        # add self.margin to the select column
+        """
         with torch.no_grad():
             indx_0 = torch.arange(cos_dist.size(0)).cuda()
             indx_1 = torch.arange(self.n_way).repeat_interleave(self.n_query).cuda()
             picked = cos_dist.gather(1, indx_1.view(-1,1))
-
-        angles = torch.acos(torch.clamp(picked, self.cos_min, self.cos_max))
-        new_ang = torch.add(angles, self.margin)
+        """
+        indx_1 = torch.arange(self.n_way).repeat_interleave(self.n_query).cuda()
         
-        cos_dist[indx_0,indx_1.view(-1,1)] = torch.cos(new_ang)
+        #print(cos_dist)
+        to_add_margin = cos_dist[np.arange(0,cos_dist.size(0)),indx_1]
+        angles = torch.acos(torch.clamp(to_add_margin, self.cos_min, self.cos_max))
+        new_ang = angles + self.margin
+        cos_dist[np.arange(0,cos_dist.size(0)),indx_1] = torch.cos(new_ang)
+        #print(cos_dist)
+
+        #cos_dist[indx_0,indx_1.view(-1,1)] = torch.cos(new_ang)
         return cos_dist
     
     def compact_loss(self, z_support):
@@ -75,7 +103,8 @@ class MyProtoNet(MetaTemplate):
         class_loss = self.loss_fn(self.scale*cos_dist_with_margin, y_query)
         
         compact_loss = self.compact_loss(z_support)
-        return torch.add(class_loss, compact_loss)
+        #return torch.add(class_loss, compact_loss)
+        return class_loss + compact_loss
 """
 def euclidean_dist( x, y):
     # x: N x D

@@ -1,5 +1,5 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 import numpy as np
 import torch
 import torch.nn as nn
@@ -21,7 +21,7 @@ from datasets import miniImageNet_few_shot
 
 def train(base_loader, val_loader, model, optimization, start_epoch, stop_epoch, params):    
     if optimization == 'Adam':
-        optimizer = torch.optim.Adam(model.parameters())
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
     else:
        raise ValueError('Unknown optimization, please define by yourself')     
 
